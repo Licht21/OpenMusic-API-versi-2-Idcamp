@@ -56,6 +56,16 @@ class UsersService {
     }
     return id;
   }
+
+  async getUsername(userId) {
+    const query = {
+      text: 'SELECT username FROM users WHERE id = $1',
+      values: [userId],
+    };
+
+    const result = await this._pool.query(query);
+    return result.rows[0].username;
+  }
 }
 
 module.exports = UsersService;

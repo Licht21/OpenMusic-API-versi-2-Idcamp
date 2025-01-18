@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable no-underscore-dangle */
 const { Pool } = require('pg');
 const { nanoid } = require('nanoid');
@@ -6,8 +7,10 @@ const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
 
 class PlaylistsService {
-  constructor() {
+  constructor(usersService, musicsService) {
     this._pool = new Pool();
+    this._usersService = usersService;
+    this._musicsService = musicsService;
   }
 
   async addPlaylist(playlistName, playlistOwner) {
@@ -39,15 +42,19 @@ class PlaylistsService {
 
   async getPlaylist(playlistOwner) {
     const query = {
-      text: `SELECT playlist.* FROM playlist
+      text: `SELECT playlist.id AS id, playlist.name AS name FROM playlist
         LEFT JOIN collaborations ON collaborations.playlist_id = playlist.id
         WHERE playlist.owner = $1 OR collaborations.user_id = $1
         GROUP BY playlist.id`,
       values: [playlistOwner],
     };
+    const username = await this._usersService.getUsername(playlistOwner);
 
     const result = await this._pool.query(query);
-    return result.rows;
+    return result.rows.map((item) => {
+      item.username = username;
+      return item;
+    });
   }
 
   async verifyPlaylistOwner(playlistId, playlistOwner) {
@@ -78,6 +85,21 @@ class PlaylistsService {
       } catch {
         throw error;
       }
+    }
+  }
+
+  async addPlaylistSong(playlistId, musicId) {
+    await this._musicsService.getMusicById(musicId);
+
+    const id = `playlist-item-${nanoid(16)}`;
+    const query = {
+      text: 'INSERT INTO playlist_musics VALUES ($1, $2, $3) RETURNING id',
+      values: [id, playlistId, musicId],
+    };
+
+    const result = await this._pool.query(query);
+    if (!result.rows[0].id) {
+      throw new InvariantError('Gagal menambahkan musik ke dalam playlist');
     }
   }
 }
