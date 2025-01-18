@@ -102,6 +102,51 @@ class PlaylistsService {
       throw new InvariantError('Gagal menambahkan musik ke dalam playlist');
     }
   }
+
+  async getPlaylistById(playlistId, userId) {
+    const query = {
+      text: 'SELECT id, name FROM playlist WHERE id = $1',
+      values: [playlistId],
+    };
+
+    const username = await this._usersService.getUsername(userId);
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Playlist tidak ditemukan');
+    }
+
+    result.rows[0].username = username;
+    return result.rows[0];
+  }
+
+  async getPlaylistSong(playlistId) {
+    const query = {
+      text: `SELECT musics.id AS id,
+        musics.title AS title,
+        musics.performer AS performer
+        FROM musics
+        LEFT JOIN playlist_musics
+        ON playlist_musics.music_id = musics.id
+        WHERE playlist_musics.playlist_id = $1`,
+      values: [playlistId],
+    };
+
+    const result = await this._pool.query(query);
+    return result.rows;
+  }
+
+  async deletePlaylistSong(playlistId, musicId) {
+    const query = {
+      text: 'DELETE FROM playlist_musics WHERE playlist_id = $1 AND music_id = $2 RETURNING id',
+      values: [playlistId, musicId],
+    };
+
+    const result = await this._pool.query(query);
+    if (!result.rows[0].id) {
+      throw new InvariantError('Musik gagal dihapus');
+    }
+  }
 }
 
 module.exports = PlaylistsService;
