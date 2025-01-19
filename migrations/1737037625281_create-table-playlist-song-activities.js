@@ -26,7 +26,7 @@ exports.up = (pgm) => {
             notNull: true
         },
         time:{
-            type: 'DATE',
+            type: 'VARCHAR(30)',
             notNull: true
         },
         playlist_id:{
