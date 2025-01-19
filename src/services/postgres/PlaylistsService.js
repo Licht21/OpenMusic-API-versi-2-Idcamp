@@ -107,10 +107,9 @@ GROUP BY
 
     const result = await this._pool.query(query);
     if (!result.rows[0].id) {
-        throw new InvariantError('Gagal menambahkan musik ke dalam playlist');
+      throw new InvariantError('Gagal menambahkan musik ke dalam playlist');
     }
     await this.addActivities(playlistId, musicId, userId, 'add');
-
   }
 
   async getPlaylistById(playlistId) {
